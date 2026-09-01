@@ -1,0 +1,6 @@
+node_modules/
+.env
+assignment
+scratch/
+*.log
+.gstack/
