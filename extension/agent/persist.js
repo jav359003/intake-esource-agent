@@ -61,14 +61,26 @@ const Q = {
 P.presentLabels = function presentLabels(expected) {
   const snap = window.__soaPerceive.snapshot();
   const names = snap.controls.map((c) => (c.name || '').trim()).filter(Boolean);
+
+  // Widgets carry their label as an accessible name, but not uniformly: a
+  // single tick and a yes/no toggle render differently from a text input, and
+  // matching only on control names reported four saved fields as lost while
+  // the platform's own store held all of them.
+  //
+  // What makes the weaker text check sound here is WHEN it runs. This is only
+  // ever called after leaving the screen and coming back, so everything now
+  // rendered was rebuilt from the store -- text on the page after a round trip
+  // is evidence of persistence in a way that text before it would not be.
+  const pageText = (document.body.innerText || '').toLowerCase();
+
   const found = new Set();
   for (const label of expected) {
     const l = label.trim().toLowerCase();
-    const hit = names.some((n) => {
+    const namedControl = names.some((n) => {
       const x = n.trim().toLowerCase();
       return x === l || x.startsWith(l + ':') || x.startsWith(l + ' :');
     });
-    if (hit) found.add(label);
+    if (namedControl || pageText.includes(l)) found.add(label);
   }
   return found;
 };
@@ -107,7 +119,14 @@ P.verifyPersisted = async function verifyPersisted(expectedLabels, ctx) {
   act.click(away.control.id);
   await sleep(ctx.settle * 5);
 
-  const back = act.resolve(Q.reopen);
+  // A visit holds several documents and each row has its own identical "Edit".
+  // Re-opening without saying WHICH form opens the first one, whose fields are
+  // not the ones just built -- every form after the first then reported that
+  // all of its fields had been lost.
+  const reopenQuery = ctx.formName
+    ? { ...Q.reopen, near: { role: ['button', 'link', 'cell', 'row'], name: ctx.formName } }
+    : Q.reopen;
+  const back = act.resolve(reopenQuery);
   if (!back.ok) return { ok: false, why: `cannot re-open the form: ${back.reason}` };
   act.click(back.control.id);
   await sleep(ctx.settle * 6);

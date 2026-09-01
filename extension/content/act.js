@@ -32,7 +32,15 @@ function nameScore(actual, want) {
   // the extra words -- which is exactly the trap this platform sets.
   const recall = hit / ww.length;
   const extra = Math.max(0, aw.length - ww.length);
-  return recall * (1 / (1 + extra * 0.6));
+  const base = recall * (1 / (1 + extra * 0.6));
+
+  // A control whose name BEGINS with what was asked for is that control, even
+  // when the rest of the name is a long explanation. "Repeating log (many
+  // records per visit)" is six words, so the extra-word penalty alone drove
+  // "repeating" down to 0.25 and the agent left five repeating forms unmarked.
+  // Descriptive labels are common; leading words carry the identity.
+  if (a === w || a.startsWith(w + ' ')) return Math.max(base, 0.85);
+  return base;
 }
 
 /**
@@ -97,9 +105,14 @@ A.find = function find(query, snap) {
     }
     let score = wants.length ? Math.max(...wants.map((w) => nameScore(c.name, w))) : 0.5;
     if (!score) continue;
-    for (const bad of avoid) {
-      if (nameScore(c.name, bad) > 0.3) score *= 0.15;   // demote, never delete
-    }
+    // Demotion is applied ONCE and only on a strong match. Applying it per
+    // matching term compounded it: "Save Visit" was demoted twice for sharing
+    // the word "visit" with the phrases "add visit" and "new visit", landing
+    // at 0.019 and losing to nothing at all. A word in common is not the same
+    // control.
+    const worst = avoid.length ? Math.max(...avoid.map((bad) => nameScore(c.name, bad))) : 0;
+    if (worst >= 0.6) score *= 0.15;                     // demote, never delete
+    else if (worst >= 0.35) score *= 0.7;                // mild doubt
     if (c.state?.disabled) score *= 0.3;
     if (nearEl) {
       const aff = affinity(nearEl, window.__soaPerceive.nodeFor(c.id));

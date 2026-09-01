@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "eSource Study Builder",
+  "version": "0.1.0",
+  "description": "Builds a clinical study specification into any eSource platform, with a human gate for anything it is not sure about.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "panel/panel.html"
+  },
+  "action": {
+    "default_title": "Open the study builder"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "js": [
+        "content/perceive.js",
+        "content/act.js",
+        "agent/typemap.js",
+        "agent/buildfield.js",
+        "agent/persist.js",
+        "agent/discover.js",
+        "agent/navigate.js",
+        "agent/plan.js",
+        "agent/run.js",
+        "content/bridge.js"
+      ]
+    }
+  ]
+}
