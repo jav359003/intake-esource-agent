@@ -1,0 +1,153 @@
+{
+  "mappings": [
+    {
+      "canonical": "text",
+      "library_entry": "Single Line Textbox",
+      "confidence": 0.97,
+      "reasoning": "Single-line free-text input matches a single-line textbox.",
+      "runner_up": "Multi-line Textbox",
+      "confusable_with": [
+        "textarea"
+      ]
+    },
+    {
+      "canonical": "textarea",
+      "library_entry": "Multi-line Textbox",
+      "confidence": 0.97,
+      "reasoning": "Free text over several lines maps to a multi-line textbox.",
+      "runner_up": "Single Line Textbox",
+      "confusable_with": [
+        "text"
+      ]
+    },
+    {
+      "canonical": "integer",
+      "library_entry": "Number (Whole)",
+      "confidence": 0.97,
+      "reasoning": "Whole-number input with optional bounds/units is a whole-number field.",
+      "runner_up": "Number (Decimal)",
+      "confusable_with": [
+        "decimal"
+      ]
+    },
+    {
+      "canonical": "decimal",
+      "library_entry": "Number (Decimal)",
+      "confidence": 0.97,
+      "reasoning": "Numbers with a fractional part belong in a decimal-number field.",
+      "runner_up": "Number (Whole)",
+      "confusable_with": [
+        "integer"
+      ]
+    },
+    {
+      "canonical": "date",
+      "library_entry": "Date",
+      "confidence": 0.98,
+      "reasoning": "Calendar date without time corresponds to a Date field.",
+      "runner_up": "Date/Time",
+      "confusable_with": [
+        "datetime"
+      ]
+    },
+    {
+      "canonical": "time",
+      "library_entry": "Time",
+      "confidence": 0.98,
+      "reasoning": "Time of day without date corresponds to a Time field.",
+      "runner_up": "Date/Time",
+      "confusable_with": [
+        "datetime"
+      ]
+    },
+    {
+      "canonical": "datetime",
+      "library_entry": "Date/Time",
+      "confidence": 0.98,
+      "reasoning": "A combined date and time belongs in a Date/Time field.",
+      "runner_up": "Date",
+      "confusable_with": [
+        "date",
+        "time"
+      ]
+    },
+    {
+      "canonical": "boolean",
+      "library_entry": "Yes/No Toggle",
+      "confidence": 0.9,
+      "reasoning": "An explicit two-state yes/no control matches a Yes/No toggle.",
+      "runner_up": "Checkbox",
+      "confusable_with": [
+        "checkbox"
+      ]
+    },
+    {
+      "canonical": "single_select",
+      "library_entry": "Dropdown",
+      "confidence": 0.95,
+      "reasoning": "A collapsed one-of list is a dropdown.",
+      "runner_up": "Radio Buttons",
+      "confusable_with": [
+        "radio"
+      ]
+    },
+    {
+      "canonical": "multi_select",
+      "library_entry": "Check List",
+      "confidence": 0.94,
+      "reasoning": "Zero-or-more selections from a coded list are a checklist of boxes.",
+      "runner_up": "Checkbox",
+      "confusable_with": [
+        "checkbox"
+      ]
+    },
+    {
+      "canonical": "radio",
+      "library_entry": "Radio Buttons",
+      "confidence": 0.95,
+      "reasoning": "Exactly one choice with all options visible uses radio buttons.",
+      "runner_up": "Dropdown",
+      "confusable_with": [
+        "single_select"
+      ]
+    },
+    {
+      "canonical": "checkbox",
+      "library_entry": "Checkbox",
+      "confidence": 0.9,
+      "reasoning": "A single on/off tick corresponds to a single checkbox.",
+      "runner_up": "Yes/No Toggle",
+      "confusable_with": [
+        "boolean"
+      ]
+    },
+    {
+      "canonical": "calculated",
+      "library_entry": "Calculated Field",
+      "confidence": 0.99,
+      "reasoning": "Values derived by formula map to a calculated field.",
+      "runner_up": null,
+      "confusable_with": []
+    }
+  ],
+  "unmapped": [],
+  "notes": [
+    "This library distinguishes a single Checkbox (boolean tick) from a Yes/No Toggle (also boolean); use Checkbox for a single tick and Yes/No Toggle for generic yes/no.",
+    "Single-select has two distinct widgets: Dropdown (collapsed one-of) and Radio Buttons (always visible one-of). Pick based on UI behavior requirements.",
+    "Multi-select is 'Check List' (a list of checkboxes). Do not confuse it with the singular 'Checkbox'.",
+    "Numbers are split into Number (Whole) vs Number (Decimal); choose carefully to avoid later migrations.",
+    "Date, Time, and Date/Time are separate elements; avoid using Date or Time where Date/Time is required."
+  ],
+  "_usage": {
+    "input_tokens": 784,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 3655,
+    "output_tokens_details": {
+      "reasoning_tokens": 2624
+    },
+    "total_tokens": 4439
+  }
+}
