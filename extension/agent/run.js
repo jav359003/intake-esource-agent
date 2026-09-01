@@ -168,7 +168,8 @@ R.execute = async function execute(options = {}) {
           { label: step.name, skip_logic: step.rule }, ctx);
         record(step, r);
         if (r.ok) { pendingLabels.push(step.name); done++; }
-        else { escalate({ about: step, why: r.why, got: r.got, wanted: r.wanted, kind: 'skip-logic' }); failed++; }
+        else { escalate({ about: step, why: r.why, got: r.got, wanted: r.wanted,
+                          sawInstead: r.sawInstead, available: r.available, kind: 'skip-logic' }); failed++; }
       }
     } catch (e) {
       escalate({ about: step, why: `unexpected failure: ${e && e.message}`, kind: 'crash' });

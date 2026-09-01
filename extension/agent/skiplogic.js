@@ -39,6 +39,42 @@ const Q = {
  * than the panel is the difference between editing the field you meant and
  * editing whichever one happened to be open.
  */
+/**
+ * Find an element by selecting each in turn and reading what the panel says.
+ *
+ * Slower than matching a name, and correct when the name on the canvas is not
+ * the label. The panel is the platform's own answer to "what is selected", so
+ * this works wherever a builder has an inspector at all.
+ */
+S.selectByInspection = async function selectByInspection(label, ctx, { max = 40 } = {}) {
+  const { act } = ctx;
+  const want = String(label).trim().toLowerCase();
+  const panelLabel = { role: 'textbox', name: ['label', 'caption', 'field label'],
+                       notRegion: ['values', 'choices'] };
+
+  const snap = window.__soaPerceive.snapshot();
+  const candidates = snap.controls
+    .filter((c) => ['textbox', 'combobox', 'checkbox', 'radio'].includes(c.role))
+    .filter((c) => !c.region.some((r) => /option|propert|setting/i.test(r)))
+    .filter((c) => !/^(find|filter|search)$/i.test(c.name || ''))
+    .sort((a, b) => a.docIndex - b.docIndex)
+    .slice(0, max);
+
+  for (const c of candidates) {
+    const node = window.__soaPerceive.nodeFor(c.id);
+    if (!node) continue;                       // snapshot moved on; skip
+    node.click();
+    await nap(ctx.settle * 2);
+    const shown = act.resolve(panelLabel);
+    if (shown.ok && String(shown.control.value || '').trim().toLowerCase() === want) {
+      return { ok: true, foundBy: 'inspection' };
+    }
+    // Re-snapshot each time: clicking changes the panel and invalidates ids.
+    window.__soaPerceive.snapshot();
+  }
+  return { ok: false, why: `inspected ${candidates.length} elements and none is labelled "${label}"` };
+};
+
 S.selectElement = async function selectElement(label, ctx) {
   const { act } = ctx;
   const CONTAINER = new Set(['tablist', 'main', 'list', 'navigation', 'form', 'table', 'group', 'dialog']);
@@ -73,12 +109,30 @@ S.selectElement = async function selectElement(label, ctx) {
     // label, optionally followed by type or state text. A name that merely
     // contains the label somewhere in the middle belongs to something else.
     .filter((c) => norm(c.name).startsWith(want));
+  // Fallback: identify elements by asking, not by reading.
+  //
+  // A canvas widget usually carries its label as its accessible name, but not
+  // always -- a multi-line textbox on this platform renders under its TYPE
+  // name while the store holds the right label, so the last field of two forms
+  // was unfindable by name however long we waited for it. Rather than special-
+  // case that widget, walk the canvas: click each element and read the label
+  // out of the options panel, which is authoritative because it is what the
+  // platform itself shows for the selected element.
+  //
+  // Bounded and only reached when the cheap path fails, so it costs a handful
+  // of clicks on the few fields that carry a rule.
+  if (!hits.length) {
+    const found = await S.selectByInspection(label, ctx);
+    if (found.ok) return found;
+  }
   if (!hits.length) {
     // An escalation that says only "not found" gives a reviewer nothing to act
     // on. Showing what the agent could see turns it into a decision.
-    const visible = act.find({ role: ['textbox', 'checkbox', 'radio', 'combobox'], minScore: 0 })
-      .filter((c) => !c.region.some((r) => /option|propert|setting/i.test(r)))
-      .slice(0, 12).map((c) => c.name);
+    const snap = window.__soaPerceive.snapshot();
+    const visible = snap.controls
+      .filter((c) => ['textbox', 'checkbox', 'radio', 'combobox', 'button'].includes(c.role))
+      .filter((c) => !c.region.some((r) => /^elements$/i.test(r)) || c.role !== 'button')
+      .slice(0, 40).map((c) => `${c.role}:${c.name}`);
     return { ok: false, escalate: true,
              why: `no element named "${label}" on the canvas`, sawInstead: visible };
   }
