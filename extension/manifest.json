@@ -39,6 +39,7 @@
         "agent/persist.js",
         "agent/discover.js",
         "agent/navigate.js",
+        "agent/skiplogic.js",
         "agent/plan.js",
         "agent/run.js",
         "content/bridge.js"

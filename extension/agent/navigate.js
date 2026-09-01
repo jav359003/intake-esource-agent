@@ -73,6 +73,25 @@ async function type(act, query, value, ctx, label) {
 }
 
 /** Is a control named exactly this on the page right now? */
+/**
+ * Wait until the page satisfies a condition, rather than sleeping a guess.
+ *
+ * Every navigation here was a click followed by a fixed pause. That works
+ * until it does not: the skip-logic pass re-opened a form and checked its
+ * canvas before the builder had rendered, reported the field missing, and then
+ * navigated on -- leaving a page that, inspected afterwards, plainly contained
+ * the field it had just failed to find. A fixed sleep encodes a machine's
+ * speed as if it were part of the platform.
+ */
+N.waitFor = async function waitFor(test, ctx, { timeout = 3000, every = 60 } = {}) {
+  const started = Date.now();
+  for (;;) {
+    try { if (test()) return { ok: true, waited: Date.now() - started }; } catch { /* mid-render */ }
+    if (Date.now() - started > timeout) return { ok: false, waited: Date.now() - started };
+    await nap(every);
+  }
+};
+
 N.seesName = function seesName(act, name) {
   return act.find({ role: ['button', 'link', 'row', 'cell', 'listitem', 'tab'], name, minScore: 0.95 })
             .some((c) => c.score >= 0.95);
@@ -175,7 +194,7 @@ N.openVisit = async function openVisit(visitName, ctx) {
                           notName: ['schedule', 'back', 'delete', 'remove'], minScore: 0.9 });
   if (!r.ok) return { ok: false, why: `cannot open visit "${visitName}": ${r.reason}` };
   act.click(r.control.id);
-  await nap(ctx.settle * 4);
+  await N.waitFor(() => act.resolve(Q.addForm).ok, ctx, { timeout: 3000 });
   return { ok: true };
 };
 
@@ -219,8 +238,14 @@ N.openBuilder = async function openBuilder(formName, ctx) {
                           near: { role: ['button', 'link', 'cell', 'row'], name: formName } });
   if (!r.ok) return { ok: false, why: `cannot open the builder for "${formName}": ${r.reason}` };
   act.click(r.control.id);
-  await nap(ctx.settle * 5);
-  return { ok: true };
+  // The builder is ready when its element library is on screen, which is a
+  // property of the platform rather than of how fast this machine is.
+  const ready = await N.waitFor(
+    () => act.find({ role: 'button', name: ['single line', 'text', 'date', 'number', 'dropdown',
+                                            'checkbox', 'radio', 'calculated'] }).length >= 3,
+    ctx, { timeout: 4000 });
+  if (!ready.ok) return { ok: false, why: `opened "${formName}" but no element library appeared within 4s` };
+  return { ok: true, waited: ready.waited };
 };
 
 N.Q = Q;

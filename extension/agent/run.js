@@ -154,11 +154,21 @@ R.execute = async function execute(options = {}) {
         if (r.ok) { pendingLabels.push(step.name); done++; }
         else { escalate({ about: step, why: r.why, diffs: r.diffs, trail: r.trail, kind: 'build' }); failed++; }
       } else if (step.kind === 'skip-logic') {
-        // Deliberately unimplemented for now rather than faked: the controls
-        // exist (a visibility mode, a controlling field, a value) and wiring
-        // them is the next piece of work. Recording it as an open item is
-        // honest; silently skipping it would not be.
-        escalate({ about: step, why: 'visibility rules are not yet wired up', kind: 'not-implemented' });
+        // A second pass over a form that is already built and saved, so the
+        // builder has to be re-entered and the form re-committed afterwards.
+        if (!openForm || openForm.name !== step.form) {
+          await flushForm();
+          const inVisit = await N.openVisit(step.visit, ctx);
+          if (!inVisit.ok) { escalate({ about: step, why: inVisit.why, kind: 'navigation' }); failed++; continue; }
+          const opened = await N.openBuilder(step.form, ctx);
+          if (!opened.ok) { escalate({ about: step, why: opened.why, kind: 'navigation' }); failed++; continue; }
+          openForm = { name: step.form, visit: step.visit }; pendingLabels = [];
+        }
+        const r = await window.__soaSkipLogic.applyRule(
+          { label: step.name, skip_logic: step.rule }, ctx);
+        record(step, r);
+        if (r.ok) { pendingLabels.push(step.name); done++; }
+        else { escalate({ about: step, why: r.why, got: r.got, wanted: r.wanted, kind: 'skip-logic' }); failed++; }
       }
     } catch (e) {
       escalate({ about: step, why: `unexpected failure: ${e && e.message}`, kind: 'crash' });
