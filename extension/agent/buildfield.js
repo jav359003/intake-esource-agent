@@ -53,11 +53,32 @@ const Q = {
   label:      { role: 'textbox', name: ['label', 'field label', 'caption', 'question text', 'title'],
                 notRegion: ['values', 'choices', 'coded values'] },
   required:   { role: ['checkbox', 'switch'], name: ['required', 'mandatory', 'must be answered'] },
-  min:        { role: 'textbox', name: ['min', 'minimum', 'lower limit', 'range from'] },
-  max:        { role: 'textbox', name: ['max', 'maximum', 'upper limit', 'range to'] },
-  units:      { role: 'textbox', name: ['units', 'unit', 'uom', 'measure'] },
-  formula:    { role: 'textbox', name: ['formula', 'expression', 'calculation'] },
-  addValue:   { role: 'button', name: ['add value', 'add option', 'add choice', 'new value', '+ value'] },
+  // Range bounds are named a dozen ways and share no common root: "Min",
+  // "Lowest Allowed", "Range From", "Floor". The list is wide on purpose --
+  // a bound the agent cannot find is a range check that never gets built.
+  min:        { role: ['textbox', 'spinbutton'],
+                name: ['min', 'minimum', 'lowest', 'lowest allowed', 'lower limit',
+                       'range from', 'least', 'floor', 'from'],
+                notName: ['max', 'maximum', 'highest'] },
+  max:        { role: ['textbox', 'spinbutton'],
+                name: ['max', 'maximum', 'highest', 'highest allowed', 'upper limit',
+                       'range to', 'greatest', 'ceiling', 'to'],
+                notName: ['min', 'minimum', 'lowest'] },
+  units:      { role: 'textbox', name: ['units', 'unit', 'uom', 'measure', 'measurement'] },
+  formula:    { role: 'textbox', name: ['formula', 'expression', 'calculation', 'derivation'] },
+  // Scoped to the sub-panel that holds the choices, and expressed as an
+  // action plus an object.
+  //
+  // Unscoped, "add value" matched the palette entry "Derived Value" exactly as
+  // well as the real control "Append Choice" -- both 0.5 -- and the agent
+  // clicked the palette, adding a whole extra field to the form instead of a
+  // choice to the list. A control that adds a coded value lives with the coded
+  // values; nothing in the type palette does.
+  addValue:   { role: 'button', verb: ['add', 'append', 'new', 'create', 'insert'],
+                noun: ['value', 'choice', 'option', 'code', 'item'],
+                name: ['add value', 'add option', 'add choice', 'append choice'],
+                region: ['values', 'choices', 'codes', 'coded'],
+                notName: ['paste', 'apply', 'remove', 'drop', 'delete'] },
   valueCode:  { role: 'textbox', name: ['code', 'stored value', 'value'],
                 region: ['values', 'options list', 'choices', 'codes'] },
   valueLabel: { role: 'textbox', name: ['label', 'display', 'text'],
@@ -233,10 +254,21 @@ async function buildFieldInner(field, ctx) {
 
   // 3. Type is already correct from the library choice. Setting range first
   //    and type second would lose the range, so range comes after.
-  if (field.min !== undefined) await B.setProperty(Q.min, field.min, ctx);
-  if (field.max !== undefined) await B.setProperty(Q.max, field.max, ctx);
-  if (field.units) await B.setProperty(Q.units, field.units, ctx);
-  if (field.formula) await B.setProperty(Q.formula, field.formula, ctx);
+  const notOffered = [];
+  for (const [what, query, value] of [['min', Q.min, field.min], ['max', Q.max, field.max],
+                                      ['units', Q.units, field.units],
+                                      ['formula', Q.formula, field.formula]]) {
+    if (value === undefined || value === null || value === '') continue;
+    const r = await B.setProperty(query, value, ctx);
+    if (!r.ok) notOffered.push(what);
+  }
+  if (notOffered.length) {
+    return { ok: false, escalate: true,
+             why: `this platform offers no control for ${notOffered.join(', ')} on a ` +
+                  `"${entry}" field, so ${notOffered.length === 1 ? 'that value is' : 'those values are'} ` +
+                  `not on the field`,
+             notOffered };
+  }
 
   if (field.options?.length) {
     const vals = await B.setCodedValues(field.options, ctx);

@@ -17,17 +17,25 @@ const Q = {
   // "+ New Source Document" scores 0.5 against "new visit" -- they share the
   // word "new" -- which was enough for the climb to stop one screen too early
   // and then fail. Adding a visit is not adding anything else.
-  addVisit:   { role: 'button', name: ['add visit', 'new visit', 'create visit', 'add timepoint', 'new event'],
+  // Action and object given separately, so any combination the platform uses
+  // reads the same: "+ Add Visit", "Create Timepoint", "New Event".
+  addVisit:   { role: 'button', verb: ['add', 'new', 'create', 'define'],
+                noun: ['visit', 'timepoint', 'event', 'occasion', 'encounter'],
+                name: ['add visit', 'new visit', 'create visit', 'add timepoint'],
                 notName: ['document', 'form', 'page', 'field', 'element', 'value', 'patient'] },
-  visitName:  { role: 'textbox', name: ['visit name', 'name', 'title', 'label'] },
-  winStart:   { role: 'textbox', name: ['window start', 'start day', 'from day', 'day from', 'earliest'] },
-  winEnd:     { role: 'textbox', name: ['window end', 'end day', 'to day', 'day to', 'latest'] },
-  addForm:    { role: 'button', name: ['new source document', 'new form', 'add form', 'new document',
-                                       'add document', 'new crf'],
-                notName: ['visit', 'timepoint', 'patient', 'value', 'element'] },
-  formName:   { role: 'textbox', name: ['document name', 'form name', 'name', 'title'] },
-  repeating:  { role: ['checkbox', 'switch'], name: ['repeating', 'log', 'multiple records', 'many records'] },
-  openBuilder:{ role: 'button', name: ['edit', 'open', 'design', 'build', 'configure'] },
+  visitName:  { role: 'textbox', name: ['visit name', 'timepoint name', 'name', 'title', 'label'] },
+  winStart:   { role: 'textbox', name: ['window start', 'window opens', 'start day', 'from day', 'earliest', 'opens'] },
+  winEnd:     { role: 'textbox', name: ['window end', 'window closes', 'end day', 'to day', 'latest', 'closes'] },
+  addForm:    { role: 'button', verb: ['add', 'new', 'create', 'define'],
+                noun: ['document', 'form', 'page', 'crf', 'casebook', 'instrument'],
+                name: ['new source document', 'new form', 'add form', 'new document', 'new crf'],
+                notName: ['visit', 'timepoint', 'patient', 'value', 'element', 'library'] },
+  formName:   { role: 'textbox', name: ['document name', 'form name', 'page title', 'name', 'title'] },
+  // Repeating is a checkbox on one platform and a picklist on another
+  // ("Record Style": Single record / Repeating log), so both roles are allowed.
+  repeating:  { role: ['checkbox', 'switch', 'combobox'],
+                name: ['repeating', 'log', 'record style', 'multiple records', 'many records'] },
+  openBuilder:{ role: 'button', name: ['edit', 'open', 'design', 'build', 'configure', 'layout'] },
 };
 
 /**
@@ -42,14 +50,17 @@ const Q = {
  */
 function commitNear(anchor) {
   return { role: 'button',
-           name: ['save', 'create', 'submit', 'confirm', 'done', 'ok', 'apply'],
+           name: ['save', 'create', 'submit', 'confirm', 'done', 'ok', 'apply', 'store', 'add'],
            // Only distinctive single words belong here. Phrases like "add
            // visit" share "visit" with "Save Visit" and demote the very
            // control they were meant to protect. What actually separates the
            // opener from the committer is position: the opener sits outside
            // the dialog, so the `near` anchor does that job properly.
-           notName: ['template', 'cancel', 'close', 'delete', 'discard'],
-           near: anchor };
+           notName: ['template', 'cancel', 'close', 'delete', 'discard', 'abandon'],
+           // Must be inside the dialog it commits. The control that OPENED the
+           // dialog sits outside it, which is what separates them on every
+           // platform regardless of wording.
+           near: anchor, nearOnly: true };
 }
 
 async function press(act, query, ctx, label) {
@@ -92,9 +103,28 @@ N.waitFor = async function waitFor(test, ctx, { timeout = 3000, every = 60 } = {
   }
 };
 
+/**
+ * Is something with this name on screen?
+ *
+ * Headings count, not just rows. Platforms differ in what happens after you
+ * create a thing: Mock A returns you to a list where the new row appears, Mock
+ * B drops you straight into its editor where the name is the page heading.
+ * Checking only for a row made a successful creation look like a failure --
+ * the fields were then built into an editor the run did not know it was in,
+ * and never committed.
+ */
 N.seesName = function seesName(act, name) {
-  return act.find({ role: ['button', 'link', 'row', 'cell', 'listitem', 'tab'], name, minScore: 0.95 })
-            .some((c) => c.score >= 0.95);
+  if (act.find({ role: ['button', 'link', 'row', 'cell', 'listitem', 'tab', 'heading'],
+                 name, minScore: 0.95 }).some((c) => c.score >= 0.95)) return true;
+  const snap = window.__soaPerceive.snapshot();
+  return (snap.heading || '').trim().toLowerCase() === String(name).trim().toLowerCase();
+};
+
+/** Are we already inside a form builder, rather than a list? */
+N.inBuilder = function inBuilder(act) {
+  return act.find({ role: 'button',
+                    name: ['text', 'date', 'number', 'dropdown', 'picklist', 'checkbox',
+                           'radio', 'calculated', 'time'] }).length >= 4;
 };
 
 /**
@@ -210,19 +240,33 @@ N.createForm = async function createForm(form, ctx) {
   const gaps = [];
   if (form.repeating) {
     const rep = act.resolve(Q.repeating);
-    if (rep.ok) act.setChecked(rep.control.id, true);
-    else gaps.push('this platform offers no way to mark a form repeating here');
+    if (!rep.ok) gaps.push('this platform offers no way to mark a form repeating here');
+    else if (rep.control.role === 'combobox' || rep.control.role === 'listbox') {
+      // Mock A ticks a box; Mock B picks "Repeating log" from a "Record Style"
+      // list. Same concept, different control, so choose by meaning rather
+      // than assuming a toggle.
+      const c = act.choose(rep.control.id, 'repeating');
+      if (!c.ok) {
+        const alt = act.choose(rep.control.id, 'log');
+        if (!alt.ok) gaps.push(`could not select a repeating option in "${rep.control.name}"`);
+      }
+    } else {
+      act.setChecked(rep.control.id, true);
+    }
     await nap(ctx.settle);
   }
   r = await press(act, commitNear(Q.formName), ctx, 'commit the document');
   if (!r.ok) return r;
 
   await nap(ctx.settle * 3);
-  if (!N.seesName(act, form.name)) {
+  // Created if the platform now shows it, or if it has taken us straight into
+  // the editor for it. Both are success; only neither is a failure.
+  const landed = N.seesName(act, form.name) || N.inBuilder(act);
+  if (!landed) {
     return { ok: false, escalate: true,
              why: `clicked "${r.clicked}" but no document named "${form.name}" appeared` };
   }
-  return { ok: true, gaps };
+  return { ok: true, gaps, openedBuilder: !N.seesName(act, form.name) || N.inBuilder(act) };
 };
 
 /**

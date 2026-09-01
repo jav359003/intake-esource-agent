@@ -142,8 +142,12 @@ R.execute = async function execute(options = {}) {
         const r = await N.createForm({ name: step.name, repeating: step.repeating }, ctx);
         record(step, r);
         if (!r.ok) { failed++; continue; }
-        const opened = await N.openBuilder(step.name, ctx);
-        if (!opened.ok) { escalate({ about: step, why: opened.why, kind: 'navigation' }); failed++; continue; }
+        // Some platforms drop straight into the builder on create; opening it
+        // again would be a second, wrong click.
+        if (!N.inBuilder(act)) {
+          const opened = await N.openBuilder(step.name, ctx);
+          if (!opened.ok) { escalate({ about: step, why: opened.why, kind: 'navigation' }); failed++; continue; }
+        }
         openForm = { name: step.name, visit: step.visit }; pendingLabels = [];
         done++;
       } else if (step.kind === 'field') {

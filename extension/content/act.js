@@ -104,6 +104,25 @@ A.find = function find(query, snap) {
       if (banned) continue;
     }
     let score = wants.length ? Math.max(...wants.map((w) => nameScore(c.name, w))) : 0.5;
+
+    // A control's name is usually an ACTION applied to an OBJECT, and
+    // platforms vary the two independently: "Add Visit" here, "Create
+    // Timepoint" there. Whole-phrase synonyms cannot cover that -- every
+    // phrase in the list matched "Create Timepoint" only halfway, so it scored
+    // 0.5 and the agent refused to click the one right control on the screen.
+    //
+    // Given the parts separately, a name that carries one of each is a match
+    // however the platform happens to combine them.
+    if (query.verb || query.noun) {
+      const words = c.name.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean);
+      const hasVerb = !query.verb || [].concat(query.verb).some((v) => words.includes(v));
+      const hasNoun = !query.noun || [].concat(query.noun).some((n) => words.includes(n));
+      if (hasVerb && hasNoun) {
+        const asked = ([].concat(query.verb || []).length ? 1 : 0) + ([].concat(query.noun || []).length ? 1 : 0);
+        const extra = Math.max(0, words.length - asked);
+        score = Math.max(score, 1 / (1 + extra * 0.25));
+      }
+    }
     if (!score) continue;
     // Demotion is applied ONCE and only on a strong match. Applying it per
     // matching term compounded it: "Save Visit" was demoted twice for sharing
@@ -114,11 +133,28 @@ A.find = function find(query, snap) {
     if (worst >= 0.6) score *= 0.15;                     // demote, never delete
     else if (worst >= 0.35) score *= 0.7;                // mild doubt
     if (c.state?.disabled) score *= 0.3;
+    let aff = 0;
     if (nearEl) {
-      const aff = affinity(nearEl, window.__soaPerceive.nodeFor(c.id));
-      score *= 1 + aff;              // up to 2x for a control in the same block
+      aff = affinity(nearEl, window.__soaPerceive.nodeFor(c.id));
+      score *= 1 + aff;
     }
-    scored.push({ ...c, score: Number(score.toFixed(3)) });
+    scored.push({ ...c, aff, score: Number(score.toFixed(3)) });
+  }
+  // `nearOnly` makes proximity a requirement, and a RELATIVE one.
+  //
+  // Every control on a screen shares some ancestor with the anchor, so an
+  // absolute "must be related" test excludes nothing. What distinguishes the
+  // button that commits a dialog from the button that opened it is that the
+  // committer is nearer -- so keep only the nearest tier. As a soft score
+  // boost this was not enough: adding "add" to the commit vocabulary, needed
+  // for a platform whose commit reads "Add Page", let the opener "+ Add Visit"
+  // come within 0.07 of the real "Save Visit" on another platform.
+  if (query.nearOnly && nearEl && scored.length) {
+    const best = Math.max(...scored.map((c) => c.aff));
+    if (best > 0) {
+      const kept = scored.filter((c) => c.aff >= best - 1e-6);
+      if (kept.length) { kept.sort((x, y) => y.score - x.score); return kept; }
+    }
   }
   scored.sort((x, y) => y.score - x.score);
   return scored;

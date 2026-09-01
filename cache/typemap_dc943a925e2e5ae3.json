@@ -1,0 +1,157 @@
+{
+  "mappings": [
+    {
+      "canonical": "text",
+      "library_entry": "Short Text",
+      "confidence": 0.95,
+      "reasoning": "Short Text is for single-line free text.",
+      "runner_up": "Long Text",
+      "confusable_with": [
+        "textarea"
+      ]
+    },
+    {
+      "canonical": "textarea",
+      "library_entry": "Long Text",
+      "confidence": 0.95,
+      "reasoning": "Long Text allows multiple lines of free text.",
+      "runner_up": "Short Text",
+      "confusable_with": [
+        "text"
+      ]
+    },
+    {
+      "canonical": "integer",
+      "library_entry": "Whole Number",
+      "confidence": 0.96,
+      "reasoning": "Whole Number captures integers and typically supports min/max.",
+      "runner_up": "Decimal Number",
+      "confusable_with": [
+        "decimal"
+      ]
+    },
+    {
+      "canonical": "decimal",
+      "library_entry": "Decimal Number",
+      "confidence": 0.96,
+      "reasoning": "Decimal Number accepts fractional values with possible bounds.",
+      "runner_up": "Whole Number",
+      "confusable_with": [
+        "integer"
+      ]
+    },
+    {
+      "canonical": "date",
+      "library_entry": "Calendar Date",
+      "confidence": 0.95,
+      "reasoning": "Calendar Date stores a date without time.",
+      "runner_up": "Date & Clock",
+      "confusable_with": [
+        "datetime"
+      ]
+    },
+    {
+      "canonical": "time",
+      "library_entry": "Clock Time",
+      "confidence": 0.95,
+      "reasoning": "Clock Time stores a time of day without a date.",
+      "runner_up": "Date & Clock",
+      "confusable_with": [
+        "datetime"
+      ]
+    },
+    {
+      "canonical": "datetime",
+      "library_entry": "Date & Clock",
+      "confidence": 0.97,
+      "reasoning": "Date & Clock combines date and time in one field.",
+      "runner_up": null,
+      "confusable_with": [
+        "date",
+        "time"
+      ]
+    },
+    {
+      "canonical": "boolean",
+      "library_entry": "Yes / No",
+      "confidence": 0.88,
+      "reasoning": "Yes / No expresses exactly two states explicitly.",
+      "runner_up": "Tick Box",
+      "confusable_with": [
+        "checkbox",
+        "radio"
+      ]
+    },
+    {
+      "canonical": "single_select",
+      "library_entry": "Picklist",
+      "confidence": 0.9,
+      "reasoning": "Picklist is a collapsed one-of dropdown.",
+      "runner_up": "Option Group",
+      "confusable_with": [
+        "radio"
+      ]
+    },
+    {
+      "canonical": "multi_select",
+      "library_entry": "Multi-Pick",
+      "confidence": 0.95,
+      "reasoning": "Multi-Pick allows selecting zero or more choices.",
+      "runner_up": null,
+      "confusable_with": [
+        "checkbox"
+      ]
+    },
+    {
+      "canonical": "radio",
+      "library_entry": "Option Group",
+      "confidence": 0.86,
+      "reasoning": "Option Group shows all choices and allows exactly one selection.",
+      "runner_up": "Picklist",
+      "confusable_with": [
+        "single_select",
+        "boolean"
+      ]
+    },
+    {
+      "canonical": "checkbox",
+      "library_entry": "Tick Box",
+      "confidence": 0.86,
+      "reasoning": "Tick Box is a single on/off checkbox.",
+      "runner_up": "Yes / No",
+      "confusable_with": [
+        "boolean",
+        "multi_select"
+      ]
+    },
+    {
+      "canonical": "calculated",
+      "library_entry": "Derived Value",
+      "confidence": 0.97,
+      "reasoning": "Derived Value is computed from other fields, not user-entered.",
+      "runner_up": null,
+      "confusable_with": []
+    }
+  ],
+  "unmapped": [],
+  "notes": [
+    "Critical distinction: Multi-Pick (multi_select list of coded options) vs Tick Box (single checkbox).",
+    "Picklist maps to single_select (collapsed dropdown) while Option Group maps to radio (all options visible, pick one).",
+    "Yes / No and Tick Box both represent two states; prefer Yes / No for explicit binary answers, Tick Box for a single affirmative flag.",
+    "Derived Value is likely read-only and formula-driven; confirm how its data type (numeric/text/date) is set if needed.",
+    "Confirm whether Option Group can ever be configured for multi-select; if so, ensure Multi-Pick is used for multi-select use cases.",
+    "Validate any timezone/seconds behavior for Clock Time and Date & Clock, and units/min/max handling for numeric fields."
+  ],
+  "_usage": {
+    "input_tokens": 781,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 4148,
+    "output_tokens_details": {
+      "reasoning_tokens": 3072
+    },
+    "total_tokens": 4929
+  }
+}

@@ -31,11 +31,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * here as things to score DOWN, which is the opposite of a selector: if a
  * platform has none of them, nothing is lost.
  */
-const NOT_A_SAVE = ['template', 'preview', 'activate', 'publish', 'cancel',
-                    'discard', 'delete', 'export', 'copy', 'duplicate'];
+const NOT_A_SAVE = ['template', 'library', 'reusable', 'preview', 'activate', 'publish',
+                    'cancel', 'discard', 'delete', 'export', 'copy', 'duplicate'];
 
 const Q = {
-  save:    { role: 'button', name: ['save', 'apply', 'commit', 'done'], notName: NOT_A_SAVE },
+  save:    { role: 'button', name: ['save', 'apply', 'commit', 'done', 'save draft', 'commit draft'],
+             notName: NOT_A_SAVE },
   // Getting out of the builder. Breadcrumbs are commonly named after their
   // DESTINATION rather than the act of leaving -- this platform's control is
   // "← Screening", the visit the form belongs to. The agent already knows that

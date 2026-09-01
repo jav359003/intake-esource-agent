@@ -24,11 +24,22 @@ const S = {};
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const Q = {
-  mode:      { role: 'combobox', name: ['visibility', 'conditional', 'display rule', 'show when', 'branching'] },
-  whenField: { role: 'combobox', name: ['when', 'controlling field', 'depends on', 'based on', 'source field'],
-               notName: ['visibility'] },
-  whenValue: { role: ['textbox', 'combobox'], name: ['value', 'equals', 'condition value', 'when value'],
-               notRegion: ['values', 'choices'] },
+  // Three concepts, named a dozen ways: whether the field is conditional,
+  // which field governs it, and what that field must hold. Mock A calls them
+  // Visibility / When / Value; Mock B calls them Display Rule / Governing
+  // Field / Required Answer. Nothing but the concepts is shared.
+  mode:      { role: 'combobox',
+               name: ['visibility', 'conditional', 'display rule', 'show when', 'branching',
+                      'display', 'shown'] },
+  whenField: { role: 'combobox',
+               name: ['when', 'controlling field', 'governing field', 'depends on',
+                      'based on', 'source field', 'parent field'],
+               notName: ['visibility', 'display rule', 'kind', 'type'] },
+  whenValue: { role: ['textbox', 'combobox'],
+               name: ['value', 'equals', 'condition value', 'when value', 'required answer',
+                      'answer', 'expected'],
+               notRegion: ['values', 'choices', 'coded'],
+               notName: ['label', 'code'] },
 };
 
 /**
@@ -180,7 +191,10 @@ S.applyRule = async function applyRule(field, ctx) {
   }
   // Turn conditional visibility on by meaning: the option that speaks of a
   // condition, not the one that means "always".
-  const chose = act.choose(mode.control.id, 'when');
+  // The option that speaks of a condition, whatever it is called: "Visible
+  // When…", "Only when…", "Conditional".
+  let chose = act.choose(mode.control.id, 'when');
+  if (!chose.ok) chose = act.choose(mode.control.id, 'conditional');
   if (!chose.ok) {
     return { ok: false, escalate: true,
              why: `could not switch "${mode.control.name}" to a conditional mode`,
