@@ -1,0 +1,50 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Study Builder</title>
+<link rel="stylesheet" href="panel.css">
+<body>
+<header>
+  <h1>Study Builder</h1>
+  <span id="platform" class="muted"></span>
+</header>
+
+<section id="setup">
+  <label class="file">
+    <input type="file" id="ir" accept="application/json">
+    <span>Choose the study specification…</span>
+  </label>
+  <div id="irsummary" class="muted"></div>
+  <details id="keybox">
+    <summary>API key</summary>
+    <input type="password" id="key" placeholder="sk-…">
+    <button id="savekey" class="ghost">Save</button>
+    <p class="muted small">Used only to read this platform's element library and map field types — a couple of calls per platform, never per field.</p>
+  </details>
+  <div class="row">
+    <button id="inspect" class="ghost">Inspect platform</button>
+    <button id="start" disabled>Build the study</button>
+  </div>
+</section>
+
+<section id="progress" hidden>
+  <div class="bar"><div id="fill"></div></div>
+  <div id="counts" class="muted small"></div>
+  <button id="stop" class="ghost small">Stop</button>
+</section>
+
+<section id="queue" hidden>
+  <h2>Decisions <span id="qhead" class="muted"></span></h2>
+  <div id="items"></div>
+</section>
+
+<section id="done" hidden>
+  <h2>Run record</h2>
+  <pre id="record"></pre>
+  <div class="row">
+    <button id="dljson" class="ghost">Download JSON</button>
+    <button id="dltxt" class="ghost">Download summary</button>
+  </div>
+</section>
+
+<script src="panel.js"></script>
+</body>

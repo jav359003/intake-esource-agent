@@ -15,7 +15,13 @@
           case 'discover':  reply({ ok: true, profile: R.discover() }); break;
           case 'plan':      reply({ ok: true, ...(await R.buildPlan(msg.ir)) }); break;
           case 'run':       reply({ ok: true, ...(await R.execute(msg.options || {})) }); break;
-          case 'status':    reply({ ok: true, ...R.status() }); break;
+          case 'status':    reply({ ok: true, ...R.status(),
+                                    gate: window.__soaGate.build(R.status().gate) }); break;
+          case 'trace': {
+            const rec = window.__soaTrace.build(R.state);
+            reply({ ok: true, record: rec, narrative: window.__soaTrace.narrate(rec) });
+            break;
+          }
           case 'resolve':   reply({ ok: true, ...R.resolveGate(msg.id, msg.answer) }); break;
           case 'stop':      R.stop(); reply({ ok: true }); break;
           default:          reply({ ok: false, why: `unknown message ${msg.type}` });

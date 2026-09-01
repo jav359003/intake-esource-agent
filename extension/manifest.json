@@ -7,7 +7,8 @@
     "storage",
     "activeTab",
     "scripting",
-    "sidePanel"
+    "sidePanel",
+    "downloads"
   ],
   "host_permissions": [
     "http://*/*",
@@ -41,6 +42,8 @@
         "agent/navigate.js",
         "agent/skiplogic.js",
         "agent/plan.js",
+        "agent/gate.js",
+        "agent/trace.js",
         "agent/run.js",
         "content/bridge.js"
       ]

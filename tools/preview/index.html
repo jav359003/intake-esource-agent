@@ -1,0 +1,48 @@
+<!doctype html><meta charset="utf-8"><title>Gate preview</title>
+<script>
+/* Stand-ins for the extension APIs, so the reviewer UI can be looked at and
+   iterated on outside Chrome. The panel code is unmodified. */
+const SAMPLE = [
+  {id:'g1',kind:'type-map',why:'confidence 0.62, and the runner-up is close',
+   about:{type:'checkbox',name:'checkbox',irPath:'type mapping'},
+   candidates:['Checkbox (0.62)','Tick Box (0.58)']},
+  {id:'g2',kind:'persistence',why:'2 of 8 fields did not survive leaving and re-opening the form',
+   about:{form:'Demographics',visit:'Screening',irPath:'visits[Screening].forms[Demographics]'},
+   missing:['Height','Weight']},
+  {id:'g3',kind:'skip-logic',why:'the visibility rule did not read back as it was set',
+   about:{form:'Adverse Events',name:'Resolution Date',visit:'Week 4',irPath:'…fields[Resolution Date].skip_logic'},
+   wanted:{when:'Outcome',value:'REC'},got:{when:'',value:''}},
+  {id:'g4',kind:'skip-logic',why:'the visibility rule did not read back as it was set',
+   about:{form:'Adverse Events',name:'Resolution Date',visit:'End of Treatment (Week 12)',irPath:'…fields[Resolution Date].skip_logic'},
+   wanted:{when:'Outcome',value:'REC'},got:{when:'',value:''}},
+  {id:'g5',kind:'build',why:'this platform offers no control for max on a "Number (Whole)" field',
+   about:{form:'Vital Signs',name:'Systolic Blood Pressure',visit:'Screening',irPath:'…fields[Systolic Blood Pressure]'},
+   notOffered:['max']},
+  {id:'g6',kind:'navigation',why:'could not reach a screen offering ["add visit","create visit"]',
+   about:{visit:'End of Treatment (Week 12)',irPath:'visits[End of Treatment (Week 12)]'}},
+];
+window.chrome = {
+  tabs:{query:(_,cb)=>cb([{id:1}]), sendMessage:(_,m,cb)=>{
+    if(m.type==='status') cb({ok:true,running:true,total:240,cursor:171,gate:window.__soaGate.build(SAMPLE)});
+    else if(m.type==='resolve') cb({ok:true});
+    else cb({ok:true});
+  }},
+  storage:{local:{set:async()=>{},get:async()=>({})}},
+};
+</script>
+<script src="../../extension/agent/gate.js"></script>
+<link rel="stylesheet" href="../../extension/panel/panel.css">
+<body style="max-width:520px">
+<div id="mount"></div>
+<script>
+fetch('../../extension/panel/panel.html').then(r=>r.text()).then(h=>{
+  document.getElementById('mount').innerHTML = h.replace(/<script[\s\S]*?<\/script>/g,'')
+    .replace(/<link[^>]*>/g,'').replace(/<\/?(?:body|meta|title)[^>]*>/g,'');
+  const s=document.createElement('script'); s.src='../../extension/panel/panel.js'; document.body.append(s);
+  setTimeout(()=>{ document.querySelector('#progress').hidden=false;
+    document.querySelector('#queue').hidden=false;
+    document.querySelector('#fill').style.width='71%';
+    document.querySelector('#counts').textContent='171 of 240 steps · 6 awaiting a decision';
+    window.renderQueue ? renderQueue(window.__soaGate.build(SAMPLE)) : null; }, 200);
+});
+</script>
