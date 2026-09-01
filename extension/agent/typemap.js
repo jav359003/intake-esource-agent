@@ -17,6 +17,10 @@
  * BEFORE a single field is built with it -- because a wrong type is a database
  * column that has to be migrated after patients are enrolled in it.
  */
+// Wrapped in its own scope: Chrome evaluates every content script in one
+// shared world, so two files declaring `const sleep` at top level is a
+// SyntaxError that kills both.
+(function () {
 
 const CANONICAL = {
   text:          'Free text, one line.',
@@ -169,3 +173,5 @@ function needsReview(result, opts) {
 
 if (typeof window !== 'undefined') window.__soaTypemap = { CANONICAL, SYSTEM, buildPrompt, triage, needsReview, HIGH_STAKES_PAIRS };
 if (typeof module !== 'undefined') module.exports = { CANONICAL, SYSTEM, buildPrompt, triage, needsReview, HIGH_STAKES_PAIRS };
+
+})();

@@ -11,6 +11,10 @@
  * stale by definition, and reusing one is how an agent ends up clicking
  * whatever moved into that position.
  */
+// Wrapped in its own scope: Chrome evaluates every content script in one
+// shared world, so two files declaring `const sleep` at top level is a
+// SyntaxError that kills both.
+(function () {
 
 const A = {};
 
@@ -75,8 +79,21 @@ A.find = function find(query, snap) {
   for (const c of s.controls) {
     if (roles.length && !roles.includes(c.role)) continue;
     if (query.region) {
-      const inRegion = c.region.some((r) => nameScore(r, query.region) > 0.4);
+      // A list of synonyms, like every other name in a query: the sub-panel
+      // holding coded values is called "Values" here and "Choices" or "Codes"
+      // elsewhere.
+      const wantedRegions = [].concat(query.region);
+      const inRegion = wantedRegions.some((w) => c.region.some((r) => nameScore(r, w) > 0.4));
       if (!inRegion) continue;
+    }
+    if (query.notRegion) {
+      // Exclusion uses a much stricter bar than inclusion, because a wrong
+      // exclusion removes the only correct control and the query then matches
+      // nothing at all. "options list" scored 0.5 against the region actually
+      // named "Options" and eliminated every field-level property on the page.
+      const banned = [].concat(query.notRegion)
+        .some((b) => c.region.some((r) => nameScore(r, b) >= 0.85));
+      if (banned) continue;
     }
     let score = wants.length ? Math.max(...wants.map((w) => nameScore(c.name, w))) : 0.5;
     if (!score) continue;
@@ -169,3 +186,5 @@ A.nameScore = nameScore;
 
 if (typeof window !== 'undefined') window.__soaAct = A;
 if (typeof module !== 'undefined') module.exports = A;
+
+})();

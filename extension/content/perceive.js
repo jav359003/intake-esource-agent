@@ -18,6 +18,10 @@
  * persisted and never written into a plan: an id that survived across
  * snapshots would be a selector wearing a disguise.
  */
+// Wrapped in its own scope: Chrome evaluates every content script in one
+// shared world, so two files declaring `const sleep` at top level is a
+// SyntaxError that kills both.
+(function () {
 
 const NODES = new Map();
 
@@ -237,6 +241,10 @@ function snapshot({ interactiveOnly = false } = {}) {
     seen.add(el);
     const r = el.getBoundingClientRect();
     const entry = {
+      // Document order, and the only safe basis for "the last one on the
+      // page". find() returns candidates sorted by SCORE; treating that order
+      // as positional wrote every coded value's label into the field's label.
+      docIndex: idx,
       id: `n${idx++}`,
       role,
       name: accessibleName(el).slice(0, 120),
@@ -275,3 +283,5 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined') {
   module.exports = { snapshot, nodeFor, accessibleName, roleOf, regionPath, implicitRole };
 }
+
+})();
