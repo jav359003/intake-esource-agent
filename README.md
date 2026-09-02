@@ -34,6 +34,9 @@ minutes.
 
 ## Install and run
 
+The assignment's own files are not in this repository. Put them wherever you
+like; the paths below assume `<assignment>/` is the folder you were given.
+
 ```bash
 # 1. the supplied mock
 cd <assignment>/esource-mock && npm install && npm run dev     # localhost:5173
@@ -43,7 +46,7 @@ cd <assignment>/esource-mock && npm install && npm run dev     # localhost:5173
 
 # 3. open the mock, click the extension icon, and in the side panel:
 #    - paste an OpenAI key (used for two calls per platform, never per field)
-#    - choose data/abc-101-study.ir.json
+#    - choose <assignment>/data/abc-101-study.ir.json
 #    - Inspect platform, then Build the study
 ```
 
@@ -54,6 +57,22 @@ cd second-mock && python3 -m http.server 5199              # localhost:5199
 ```
 
 ---
+
+## What is in this repository
+
+```
+extension/          load this unpacked in Chrome
+  content/          perceive, act, and the bridge to the extension
+  agent/            discover, typemap, plan, navigate, buildfield,
+                    skiplogic, persist, gate, trace, run
+  panel/            the reviewer's side panel
+  background.js     holds the API key and makes the two model calls
+second-mock/        Veridian EDC, the second platform (see its README)
+tools/              development harnesses (see its README)
+cache/              type mappings already derived, one file per library.
+                    Committed on purpose: it makes the reported results
+                    reproducible without an API key.
+```
 
 ## How it works
 
