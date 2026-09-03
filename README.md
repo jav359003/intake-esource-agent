@@ -34,6 +34,8 @@ minutes.
 
 ## Install and run
 
+Full instructions and troubleshooting: [INSTALL.md](INSTALL.md)
+
 The assignment's own files are not in this repository. Put them wherever you
 like; the paths below assume `<assignment>/` is the folder you were given.
 
