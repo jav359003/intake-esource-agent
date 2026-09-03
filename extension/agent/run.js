@@ -30,6 +30,28 @@ const state = {
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => new Date().toISOString();
 
+/**
+ * The run context, built here rather than handed in.
+ *
+ * Every standalone test set this up before calling anything, so the packaged
+ * extension -- which just sends "plan" and "run" over a message -- reached
+ * readExisting with a null context and died on `ctx.act`. A module that needs
+ * a context should be able to make itself a working one.
+ */
+function defaultCtx(over = {}) {
+  return {
+    act: window.__soaAct,
+    settle: 35,
+    stepLimit: 28,
+    log: (k, v) => trace({ kind: 'log', k, v }),
+    ...over,
+  };
+}
+function useCtx(ctx) {
+  state.ctx = { ...defaultCtx(), ...(state.ctx || {}), ...(ctx || {}) };
+  return state.ctx;
+}
+
 function trace(entry) {
   state.trace.push({ at: now(), ...entry });
   return entry;
@@ -59,6 +81,7 @@ function escalate(item) {
  * about is escalated BEFORE a field is built with it.
  */
 R.ensureTypeMap = async function ensureTypeMap(ctx) {
+  useCtx(ctx);
   if (state.typeMap) return { ok: true, cached: true };
 
   const profile = window.__soaDiscover.profile(window.__soaAct);
@@ -92,6 +115,7 @@ R.ensureTypeMap = async function ensureTypeMap(ctx) {
 };
 
 R.discover = function discover() {
+  useCtx();
   state.profile = window.__soaDiscover.profile(window.__soaAct);
   trace({ kind: 'discovery', profile: state.profile });
   return state.profile;
@@ -117,7 +141,8 @@ R.readExisting = function readExisting(ctx) {
   return { visits };
 };
 
-R.buildPlan = async function buildPlan(ir, ctx = state.ctx) {
+R.buildPlan = async function buildPlan(ir, ctx) {
+  ctx = useCtx(ctx);
   if (!state.profile) R.discover();
   const existing = R.readExisting(ctx);
   state.steps = window.__soaPlan.planStudy(ir, existing);
@@ -146,7 +171,7 @@ function libraryEntryFor(canonical) {
  * grind against.
  */
 R.execute = async function execute(options = {}) {
-  const ctx = state.ctx = { ...state.ctx, ...options.ctx };
+  const ctx = useCtx(options.ctx);
   const { act } = ctx;
   const N = window.__soaNavigate, B = window.__soaBuildField, P = window.__soaPersist;
   const limit = options.maxSteps ?? Infinity;

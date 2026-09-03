@@ -27,7 +27,12 @@
           case 'stop':      R.stop(); reply({ ok: true }); break;
           default:          reply({ ok: false, why: `unknown message ${msg.type}` });
         }
-      } catch (e) { reply({ ok: false, why: String(e && e.message || e) }); }
+      } catch (e) {
+        // A stack is what makes a panel error actionable; the message alone
+        // ("Cannot read properties of null") says nothing about where.
+        reply({ ok: false, why: String((e && e.message) || e),
+                where: String((e && e.stack) || '').split('\n').slice(1, 4).join('\n') });
+      }
     })();
     return true;                      // async reply
   });

@@ -77,7 +77,7 @@ $('#inspect').addEventListener('click', async () => {
                'That is fine: the agent reads the library the first time it opens a ' +
                'builder during the run, and settles the type mapping there.\n\n' +
                (p.commit.control ? `From here it can see a commit control: "${p.commit.control}".`
-                                 : 'Nothing on this screen commits anything, which is also expected.'));
+                                 : 'Nothing on this screen commits anything, which is also expected.'), true);
   }
   say(`Found ${p.libraryEntries.length} element types: ${p.libraryEntries.join(', ')}\n\n` +
       `Commits with "${p.commit.control}"` +
@@ -89,7 +89,7 @@ $('#inspect').addEventListener('click', async () => {
 $('#start').addEventListener('click', async () => {
   clearSay();
   const planned = await send({ type: 'plan', ir });
-  if (!planned.ok) return say(planned.why);
+  if (!planned.ok) return say(planned.why + (planned.where ? `\n\n${planned.where}` : ''));
   say(`Planned ${planned.steps} steps.`, true);
   $('#progress').hidden = false; $('#queue').hidden = false;
   send({ type: 'run' }).then(finish);
