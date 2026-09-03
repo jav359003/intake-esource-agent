@@ -41,8 +41,10 @@ const Q = {
   // DESTINATION rather than the act of leaving -- this platform's control is
   // "← Screening", the visit the form belongs to. The agent already knows that
   // name, so it is passed in as a synonym rather than guessed at.
-  leave:   { role: ['button', 'link'], name: ['back', 'close', 'return', 'exit', 'schedule', 'documents'] },
-  reopen:  { role: 'button', name: ['edit', 'open', 'design', 'build', 'configure'] },
+  leave:   { role: ['button', 'link'], name: ['back', 'close', 'return', 'exit', 'schedule', 'documents'],
+             notNav: true },
+  reopen:  { role: ['button', 'link'], name: ['edit', 'open', 'design', 'build', 'configure', 'layout'],
+             notNav: true, notName: ['delete', 'remove', 'retire', 'preview'] },
 };
 
 /**
@@ -125,12 +127,23 @@ P.verifyPersisted = async function verifyPersisted(expectedLabels, ctx) {
   // not the ones just built -- every form after the first then reported that
   // all of its fields had been lost.
   const reopenQuery = ctx.formName
-    ? { ...Q.reopen, near: { role: ['button', 'link', 'cell', 'row'], name: ctx.formName } }
+    ? { ...Q.reopen, near: { role: ['button', 'link', 'cell', 'gridcell', 'columnheader', 'row', 'listitem'], name: ctx.formName } }
     : Q.reopen;
   const back = act.resolve(reopenQuery);
   if (!back.ok) return { ok: false, why: `cannot re-open the form: ${back.reason}` };
   act.click(back.control.id);
-  await sleep(ctx.settle * 6);
+
+  // Wait for the form to actually redraw before judging it. A fixed pause was
+  // enough when driving the page directly, and not enough in Chrome with the
+  // panel polling alongside -- the check read an empty canvas and reported
+  // every field lost on a form the platform had saved correctly.
+  const N = window.__soaNavigate;
+  if (N && N.waitFor) {
+    await N.waitFor(() => P.presentLabels(expectedLabels).size >= expectedLabels.length,
+                    ctx, { timeout: 5000, every: 120 });
+  } else {
+    await sleep(ctx.settle * 6);
+  }
 
   const after = P.presentLabels(expectedLabels);
   const missing = expectedLabels.filter((l) => !after.has(l));

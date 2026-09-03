@@ -189,7 +189,11 @@ R.execute = async function execute(options = {}) {
   const flushForm = async () => {
     if (!openForm) return;
     const save = await P.save(ctx);
-    const about = { kind: 'form', name: openForm.name || '(unnamed form)', visit: openForm.visit };
+    // gate.js phrases a persistence question as `"<form>" may not have saved`,
+    // so the escalation has to carry `form`, not only `name`. Without it every
+    // one of these cards read '"undefined" may not have saved'.
+    const about = { kind: 'form', name: openForm.name || '(unnamed form)',
+                    form: openForm.name || '(unnamed form)', visit: openForm.visit };
     if (!save.ok) { escalate({ about, why: save.why, kind: 'save' }); failed++; }
     else {
       const check = await P.verifyPersisted(pendingLabels,

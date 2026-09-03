@@ -144,6 +144,25 @@ function accessibleName(el) {
   return parentText;
 }
 
+/**
+ * Is this control part of the application's top-level navigation?
+ *
+ * Chrome tabs sit in every screen and often carry words that a goal is
+ * legitimately looking for: Mock B's workspace switcher is called "Design",
+ * which scored higher than the "Layout" control that actually opens a form and
+ * sent the agent out of the form it was verifying. Naming those tabs to
+ * exclude them would be platform knowledge; noticing they are navigation is
+ * not.
+ */
+function inNavigation(el) {
+  for (let n = el; n && n !== document.body; n = n.parentElement) {
+    const role = (n.getAttribute && n.getAttribute('role')) || '';
+    if (role === 'navigation' || role === 'menubar' || role === 'tablist') return true;
+    if (n.tagName === 'NAV') return true;
+  }
+  return false;
+}
+
 function isVisible(el) {
   const style = getComputedStyle(el);
   if (style.visibility === 'hidden' || style.display === 'none' || style.opacity === '0') return false;
@@ -249,6 +268,7 @@ function snapshot({ interactiveOnly = false } = {}) {
       role,
       name: accessibleName(el).slice(0, 120),
       region: regionPath(el),
+      inNav: inNavigation(el),
       box: [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)],
     };
     const v = valueOf(el, role);

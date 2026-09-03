@@ -35,7 +35,8 @@ const Q = {
   // ("Record Style": Single record / Repeating log), so both roles are allowed.
   repeating:  { role: ['checkbox', 'switch', 'combobox'],
                 name: ['repeating', 'log', 'record style', 'multiple records', 'many records'] },
-  openBuilder:{ role: 'button', name: ['edit', 'open', 'design', 'build', 'configure', 'layout'] },
+  openBuilder:{ role: ['button', 'link'], name: ['edit', 'open', 'design', 'build', 'configure', 'layout'],
+                notNav: true, notName: ['delete', 'remove', 'retire', 'preview'] },
 };
 
 /**
@@ -114,7 +115,7 @@ N.waitFor = async function waitFor(test, ctx, { timeout = 3000, every = 60 } = {
  * and never committed.
  */
 N.seesName = function seesName(act, name) {
-  if (act.find({ role: ['button', 'link', 'row', 'cell', 'listitem', 'tab', 'heading'],
+  if (act.find({ role: ['button', 'link', 'row', 'cell', 'gridcell', 'listitem', 'tab', 'heading'],
                  name, minScore: 0.95 }).some((c) => c.score >= 0.95)) return true;
   const snap = window.__soaPerceive.snapshot();
   return (snap.heading || '').trim().toLowerCase() === String(name).trim().toLowerCase();
@@ -152,6 +153,7 @@ N.inBuilder = function inBuilder(act) {
 N.wayOut = function wayOut(act) {
   const snap = window.__soaPerceive.snapshot();
   const clickable = snap.controls.filter((c) => ['button', 'link'].includes(c.role) && c.name
+    && !c.inNav
     && !/delete|remove|cancel|discard|save|activate|preview|template/i.test(c.name));
 
   const arrowed = clickable.filter((c) => /^\s*[←‹⟵«<⇦]/.test(c.name));
@@ -218,9 +220,9 @@ N.createVisit = async function createVisit(visit, ctx) {
 N.openVisit = async function openVisit(visitName, ctx) {
   const { act } = ctx;
   // Same climb: opening a visit is only possible from the schedule.
-  await N.ensureCan({ role: ['button', 'link', 'cell'], name: visitName,
+  await N.ensureCan({ role: ['button', 'link', 'cell', 'gridcell'], name: visitName,
                       notName: ['schedule', 'back'], minScore: 0.9 }, ctx);
-  const r = act.resolve({ role: ['button', 'link', 'cell'], name: visitName,
+  const r = act.resolve({ role: ['button', 'link', 'cell', 'gridcell'], name: visitName,
                           notName: ['schedule', 'back', 'delete', 'remove'], minScore: 0.9 });
   if (!r.ok) return { ok: false, why: `cannot open visit "${visitName}": ${r.reason}` };
   act.click(r.control.id);
@@ -279,7 +281,7 @@ N.createForm = async function createForm(form, ctx) {
 N.openBuilder = async function openBuilder(formName, ctx) {
   const { act } = ctx;
   const r = act.resolve({ ...Q.openBuilder,
-                          near: { role: ['button', 'link', 'cell', 'row'], name: formName } });
+                          near: { role: ['button', 'link', 'cell', 'gridcell', 'columnheader', 'row', 'listitem'], name: formName } });
   if (!r.ok) return { ok: false, why: `cannot open the builder for "${formName}": ${r.reason}` };
   act.click(r.control.id);
   // The builder is ready when its element library is on screen, which is a

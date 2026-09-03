@@ -94,6 +94,8 @@ A.find = function find(query, snap) {
       const inRegion = wantedRegions.some((w) => c.region.some((r) => nameScore(r, w) > 0.4));
       if (!inRegion) continue;
     }
+    // A goal that edits or commits something is never satisfied by a chrome tab.
+    if (query.notNav && c.inNav) continue;
     if (query.notRegion) {
       // Exclusion uses a much stricter bar than inclusion, because a wrong
       // exclusion removes the only correct control and the query then matches

@@ -204,7 +204,16 @@ B.readBack = function readBack(field, ctx) {
   };
 
   check('label', Q.label, field.label, (c) => c.value);
-  check('type', Q.typeSelect, ctx.libraryEntryFor(field.type), (c) => c.value);
+  // Anchored to the label input this field's own properties cluster around.
+  //
+  // Mock B keeps a second combobox on the same screen -- the library picker
+  // used to add the NEXT element -- named the same way and sitting on its
+  // placeholder. Unanchored, read-back sometimes read that one and reported a
+  // correctly typed field as "— choose —". Which of two same-named controls
+  // belongs to the field being edited is a question of proximity, not of
+  // platform knowledge, so `nearOnly` keeps only the nearer tier.
+  check('type', { ...Q.typeSelect, near: Q.label, nearOnly: true },
+        ctx.libraryEntryFor(field.type), (c) => c.value);
   if (field.required !== undefined) {
     const hit = act.resolve(Q.required);
     if (hit.ok && Boolean(hit.control.state?.checked) !== Boolean(field.required)) {
