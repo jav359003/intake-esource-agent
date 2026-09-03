@@ -9,6 +9,9 @@ It is written to work on an eSource it has never seen. There are no CSS
 selectors, no element ids, no hardcoded button labels and no assumed screen
 order anywhere in it.
 
+**Walkthrough:** [watch the run](https://drive.google.com/file/d/1tZHOWpEJgmHvyzGJtFkU9lGU8JkqcXxi/view?usp=sharing) — a full run against two different
+eSource platforms, including the human gate.
+
 ## Results
 
 The same extension, no code changed between them:
