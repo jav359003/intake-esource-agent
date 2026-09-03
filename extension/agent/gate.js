@@ -30,6 +30,10 @@ const G = {};
 const SEVERITY = {
   'type-map':       { rank: 1, blocking: true,  label: 'Field type',
                       cost: 'A wrong type is a database column migrated after patients are enrolled.' },
+  // A confirmation, not a blocker: the mapping is confident, but these are the
+  // pairs most often mapped the wrong way round, so a person sees them once.
+  'type-map-confirm': { rank: 2, blocking: false, label: 'Confirm type mapping',
+                      cost: 'One answer covers every field of these types in the study.' },
   'coded-values':   { rank: 2, blocking: true,  label: 'Coded values',
                       cost: 'Labels without codes look right and store the wrong thing.' },
   'skip-logic':     { rank: 3, blocking: false, label: 'Visibility rule',
@@ -52,6 +56,7 @@ const SEVERITY = {
 function questionKey(item) {
   const a = item.about || {};
   if (item.kind === 'type-map') return `type:${a.type || a.canonical}`;
+  if (item.kind === 'type-map-confirm') return 'type-map-confirm';
   if (item.kind === 'skip-logic') return `rule:${a.form}:${a.name}`;
   if (item.kind === 'build') return `field:${a.form}:${a.name}:${String(item.why).slice(0, 40)}`;
   if (item.kind === 'navigation') return `nav:${a.visit || ''}:${a.form || ''}`;
@@ -115,6 +120,8 @@ function phrase(g) {
   const one = g.occurrences[0] || {};
   switch (g.kind) {
     case 'type-map':   return `Which element should "${one.name || g.key.split(':')[1]}" fields use?`;
+    case 'type-map-confirm':
+      return 'These are the pairs most often mapped the wrong way round. Do they look right?';
     case 'skip-logic': return `Could not set the visibility rule on "${one.name}". Set it by hand, or skip it?`;
     case 'build':      return `"${one.name}" was not built. Retry, or leave it out?`;
     case 'persistence':
@@ -127,6 +134,7 @@ function phrase(g) {
 function options(g) {
   switch (g.kind) {
     case 'type-map':   return ['use the agent\'s choice', 'use the runner-up', 'pick another'];
+    case 'type-map-confirm': return ['yes, these are right', 'no, let me change one'];
     case 'skip-logic': return ['I set it by hand', 'build without the rule', 'retry'];
     case 'build':      return ['retry', 'leave it out', 'I built it by hand'];
     case 'persistence':

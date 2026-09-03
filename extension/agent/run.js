@@ -107,9 +107,10 @@ R.ensureTypeMap = async function ensureTypeMap(ctx) {
                why: b.why, candidates: b.options, kind: 'type-map' });
   }
   for (const c of triaged.confirm) {
-    escalate({ about: { kind: 'type-map', name: 'high-stakes pairs' },
-               why: c.why, candidates: c.rows.map((r) => `${r.pair[0]} → ${r.entries[0]}  |  ${r.pair[1]} → ${r.entries[1]}`),
-               kind: 'type-map' });
+    escalate({ about: { kind: 'type-map-confirm', name: 'the pairs most often mapped the wrong way round' },
+               why: c.why,
+               candidates: c.rows.map((r) => `${r.pair[0]} → ${r.entries[0]}   |   ${r.pair[1]} → ${r.entries[1]}`),
+               kind: 'type-map-confirm' });
   }
   return { ok: true, mapped: Object.keys(map).length, blocking: triaged.blocking.length };
 };
@@ -171,6 +172,10 @@ function libraryEntryFor(canonical) {
  * grind against.
  */
 R.execute = async function execute(options = {}) {
+  if (state.running) {
+    return { ok: false, alreadyRunning: true,
+             why: 'a run is already in progress; stop it before starting another' };
+  }
   const ctx = useCtx(options.ctx);
   const { act } = ctx;
   const N = window.__soaNavigate, B = window.__soaBuildField, P = window.__soaPersist;
@@ -183,13 +188,14 @@ R.execute = async function execute(options = {}) {
   const flushForm = async () => {
     if (!openForm) return;
     const save = await P.save(ctx);
-    if (!save.ok) { escalate({ about: { kind: 'form', ...openForm }, why: save.why, kind: 'save' }); failed++; }
+    const about = { kind: 'form', name: openForm.name || '(unnamed form)', visit: openForm.visit };
+    if (!save.ok) { escalate({ about, why: save.why, kind: 'save' }); failed++; }
     else {
       const check = await P.verifyPersisted(pendingLabels,
         { ...ctx, parentName: openForm.visit, formName: openForm.name });
       trace({ kind: 'form-committed', form: openForm.name, visit: openForm.visit,
               saved: save.clicked, persisted: check.ok ? check.persisted : 0 });
-      if (!check.ok) { escalate({ about: { kind: 'form', ...openForm }, why: check.why, missing: check.missing, kind: 'persistence' }); failed++; }
+      if (!check.ok) { escalate({ about, why: check.why, missing: check.missing, kind: 'persistence' }); failed++; }
     }
     openForm = null; pendingLabels = [];
   };

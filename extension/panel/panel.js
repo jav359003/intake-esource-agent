@@ -87,16 +87,27 @@ $('#inspect').addEventListener('click', async () => {
 });
 
 $('#start').addEventListener('click', async () => {
+  // Clicking Build twice starts a second run over the same state: forms are
+  // created twice, a visit gets skipped, and the queue fills with collisions.
+  if ($('#start').disabled) return;
+  $('#start').disabled = true;
   clearSay();
   const planned = await send({ type: 'plan', ir });
   if (!planned.ok) return say(planned.why + (planned.where ? `\n\n${planned.where}` : ''));
   say(`Planned ${planned.steps} steps.`, true);
   $('#progress').hidden = false; $('#queue').hidden = false;
-  send({ type: 'run' }).then(finish);
+  send({ type: 'run' }).then((r) => {
+    if (r && r.alreadyRunning) return say(r.why);
+    finish(r);
+  });
   timer = setInterval(poll, 700);
 });
 
-$('#stop').addEventListener('click', () => send({ type: 'stop' }));
+$('#stop').addEventListener('click', async () => {
+  await send({ type: 'stop' });
+  $('#start').disabled = false;
+  say('Stopped. Building again resumes: anything already there is skipped.', true);
+});
 
 async function poll() {
   const s = await send({ type: 'status' });
@@ -152,6 +163,7 @@ function node(t, cls, text) { const n = document.createElement(t); n.className =
 
 async function finish(r) {
   clearInterval(timer);
+  $('#start').disabled = false;
   const s = await send({ type: 'status' });
   renderQueue(s.gate || []);
   const rec = await send({ type: 'trace' });
