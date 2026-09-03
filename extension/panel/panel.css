@@ -34,3 +34,10 @@ summary{cursor:pointer;color:var(--dim);font-size:12px}
 .resolved{opacity:.5}
 pre{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px;
     font:11.5px/1.5 ui-monospace,monospace;max-height:240px;overflow:auto;white-space:pre-wrap}
+
+/* alert() is ignored inside a side panel, so failures need somewhere to appear.
+   Every error path writes here instead. */
+.status{border-left:3px solid var(--block);background:var(--blockbg);color:var(--ink);
+        padding:.7rem .9rem;border-radius:0 6px 6px 0;margin-bottom:12px;font-size:12.5px;
+        white-space:pre-wrap;word-break:break-word}
+.status.ok{border-left-color:var(--ok);background:var(--okbg)}

@@ -9,8 +9,42 @@
 const $ = (s) => document.querySelector(s);
 let ir = null, record = null, timer = null;
 
-const send = (msg) => new Promise((res) => chrome.tabs.query({ active: true, currentWindow: true },
-  ([tab]) => chrome.tabs.sendMessage(tab.id, msg, (r) => res(r || { ok: false, why: 'no reply from the page' }))));
+/**
+ * Say what happened, in the panel.
+ *
+ * alert() is ignored in a Chrome side panel, so the first version of this
+ * reported every failure into the void -- clicking Inspect platform on a tab
+ * whose content scripts had not injected did nothing at all, with no way to
+ * tell a broken extension from a broken click.
+ */
+function say(text, ok = false) {
+  const el = $('#status');
+  el.textContent = text;
+  el.className = 'status' + (ok ? ' ok' : '');
+  el.hidden = false;
+}
+function clearSay() { $('#status').hidden = true; }
+
+const send = (msg) => new Promise((res) => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs && tabs[0];
+    if (!tab) return res({ ok: false, why: 'no active tab' });
+    // A content script cannot run on chrome:// pages or the extensions page,
+    // and it only injects on page load -- so a tab opened before the extension
+    // was loaded has none. Both are ordinary situations that need saying, not
+    // failing silently.
+    if (!/^https?:/.test(tab.url || '')) {
+      return res({ ok: false, why: `This panel drives a web page, but the tab is showing\n${tab.url || 'an internal page'}\n\nOpen the eSource platform in this tab and try again.` });
+    }
+    chrome.tabs.sendMessage(tab.id, msg, (r) => {
+      const err = chrome.runtime.lastError;
+      if (err || !r) {
+        return res({ ok: false, why: `The page did not answer.\n\n${err ? err.message : 'no reply'}\n\nReload the tab (the agent only loads with the page) and try again.` });
+      }
+      res(r);
+    });
+  });
+});
 
 $('#ir').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -24,20 +58,32 @@ $('#ir').addEventListener('change', async (e) => {
 });
 
 $('#savekey').addEventListener('click', async () => {
-  await chrome.storage.local.set({ openaiKey: $('#key').value.trim() });
+  const k = $('#key').value.trim();
+  if (!k) return say('Paste a key first.');
+  await chrome.storage.local.set({ openaiKey: k });
   $('#key').value = ''; $('#keybox').open = false;
+  say('Key saved.', true);
 });
 
 $('#inspect').addEventListener('click', async () => {
+  say('Reading the platform…');
   const r = await send({ type: 'discover' });
-  if (!r.ok) return alert(r.why);
+  if (!r.ok) return say(r.why);
   const p = r.profile;
   $('#platform').textContent = `${p.libraryEntries.length} element types · commits with "${p.commit.control}"`;
+  say(`Found ${p.libraryEntries.length} element types: ${p.libraryEntries.join(', ')}\n\n` +
+      `Commits with "${p.commit.control}"` +
+      (p.commit.decoys.length ? `, rejecting ${p.commit.decoys.join(', ')}` : '') +
+      (p.reuse.canImport ? `\nForms can be reused via "${p.reuse.importControl}"` : '') +
+      (p.gaps.length ? `\n\nCould not determine: ${p.gaps.join('; ')}` : ''), true);
 });
 
 $('#start').addEventListener('click', async () => {
+  clearSay();
+  const planned = await send({ type: 'plan', ir });
+  if (!planned.ok) return say(planned.why);
+  say(`Planned ${planned.steps} steps.`, true);
   $('#progress').hidden = false; $('#queue').hidden = false;
-  await send({ type: 'plan', ir });
   send({ type: 'run' }).then(finish);
   timer = setInterval(poll, 700);
 });
@@ -55,7 +101,7 @@ async function poll() {
 }
 
 function renderQueue(items) {
-  const list = window.__soaGateView ? window.__soaGateView(items) : items;
+  const list = items;
   $('#qhead').textContent = list.length ? `— ${list.length} to clear` : '— nothing outstanding';
   $('#items').textContent = '';
   for (const g of list) {
