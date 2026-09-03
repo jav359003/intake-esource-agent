@@ -23,7 +23,11 @@ const SAMPLE = [
 ];
 window.chrome = {
   tabs:{query:(_,cb)=>cb([{id:1}]), sendMessage:(_,m,cb)=>{
-    if(m.type==='status') cb({ok:true,running:true,total:240,cursor:171,gate:window.__soaGate.build(SAMPLE)});
+    if(m.type==='status') cb({ok:true,running:true,total:240,cursor:171,
+      now:'Vital Signs — Systolic Blood Pressure',
+      counts:{want:{visit:4,form:28,field:195,'skip-logic':13},
+              made:{visit:3,form:21,field:148,'skip-logic':6}},
+      gate:window.__soaGate.build(SAMPLE)});
     else if(m.type==='resolve') cb({ok:true});
     else cb({ok:true});
   }},
@@ -39,10 +43,24 @@ fetch('../../extension/panel/panel.html').then(r=>r.text()).then(h=>{
   document.getElementById('mount').innerHTML = h.replace(/<script[\s\S]*?<\/script>/g,'')
     .replace(/<link[^>]*>/g,'').replace(/<\/?(?:body|meta|title)[^>]*>/g,'');
   const s=document.createElement('script'); s.src='../../extension/panel/panel.js'; document.body.append(s);
-  setTimeout(()=>{ document.querySelector('#progress').hidden=false;
+  setTimeout(()=>{
+    document.querySelector('#progress').hidden=false;
     document.querySelector('#queue').hidden=false;
     document.querySelector('#fill').style.width='71%';
-    document.querySelector('#counts').textContent='171 of 240 steps · 6 awaiting a decision';
-    window.renderQueue ? renderQueue(window.__soaGate.build(SAMPLE)) : null; }, 200);
+    document.querySelector('#now').textContent='Vital Signs — Systolic Blood Pressure';
+    const set=(id,a,b)=>document.querySelector(id).textContent=a+'/'+b;
+    set('#cVisits',3,4); set('#cForms',21,28); set('#cFields',148,195); set('#cRules',6,13);
+    document.querySelector('#platform').textContent='13 field types · saves with “Save”';
+    document.querySelector('#s1').className='step complete';
+    document.querySelector('#s1done').hidden=false;
+    document.querySelector('#s1done').textContent='Found 13 field types: Calculated Field, Check List, Checkbox, Date, Date/Time, Dropdown, Multi-line Textbox, Number (Decimal), Number (Whole), Radio Buttons, Single Line Textbox, Time, Yes/No Toggle.\nSaves with “Save”, not Activate or Save As Template.\nForms can be reused here via “Import From Library…”.';
+    document.querySelector('#s2').className='step complete';
+    document.querySelector('#s2done').hidden=false;
+    document.querySelector('#s2done').textContent='ABC-101 — 4 visits, 28 forms, 195 fields, 13 visibility rules.';
+    document.querySelector('#filelabel').textContent='abc-101-study.ir.json';
+    document.querySelector('#s3').className='step active';
+    document.querySelector('#start').disabled=true;
+    window.renderQueue ? renderQueue(window.__soaGate.build(SAMPLE)) : null;
+  }, 250);
 });
 </script>

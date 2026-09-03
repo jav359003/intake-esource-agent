@@ -24,6 +24,7 @@ const state = {
   gate: [],               // items awaiting a human
   running: false,
   stopped: false,
+  now: null,
   ctx: null,
 };
 
@@ -204,6 +205,7 @@ R.execute = async function execute(options = {}) {
     if (state.stopped) break;
     const step = state.steps[state.cursor++];
 
+    state.now = describe(step);
     if (step.action === 'skip') { skipped++; trace({ kind: step.kind, name: step.name, action: 'skip', why: step.why, irPath: step.irPath }); continue; }
     if (step.kind === 'problem') { escalate({ about: step, why: step.why, kind: 'input-problem' }); continue; }
 
@@ -264,8 +266,17 @@ R.execute = async function execute(options = {}) {
     if (options.onProgress) options.onProgress(R.status());
   }
   await flushForm();
+  state.now = null;
   state.running = false;
   return { done, skipped, failed, gate: state.gate.length, traced: state.trace.length };
+
+  function describe(step) {
+    if (step.kind === 'visit') return `Creating visit ${step.name}`;
+    if (step.kind === 'form') return `${step.visit} — creating ${step.name}`;
+    if (step.kind === 'field') return `${step.form} — ${step.name}`;
+    if (step.kind === 'skip-logic') return `${step.form} — visibility rule on ${step.name}`;
+    return step.kind;
+  }
 
   function record(step, r) {
     trace({ kind: step.kind, name: step.name, irPath: step.irPath,
@@ -275,12 +286,21 @@ R.execute = async function execute(options = {}) {
 };
 
 R.status = function status() {
+  const want = { visit: 0, form: 0, field: 0, 'skip-logic': 0 };
+  const made = { visit: 0, form: 0, field: 0, 'skip-logic': 0 };
+  for (const s of state.steps) if (s.kind in want) want[s.kind]++;
+  for (const t of state.trace) {
+    if (t.kind in made && (t.action === 'created' || t.action === 'skip')) made[t.kind]++;
+  }
   return {
     running: state.running,
     total: state.steps.length,
     cursor: state.cursor,
     gate: state.gate.filter((g) => g.status === 'open'),
     trace: state.trace.length,
+    // What a person actually wants to know: how much of the STUDY is built.
+    counts: { want, made },
+    now: state.now || null,
   };
 };
 

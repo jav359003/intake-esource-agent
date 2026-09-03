@@ -3,47 +3,100 @@
 <title>Study Builder</title>
 <link rel="stylesheet" href="panel.css">
 <body>
+
 <header>
-  <h1>Study Builder</h1>
-  <span id="platform" class="muted"></span>
+  <div>
+    <h1>Study Builder</h1>
+    <div id="platform" class="sub">Open an eSource platform to begin</div>
+  </div>
 </header>
+
 <div id="status" class="status" hidden></div>
 
+<!-- ── setup: three steps, in order, each showing its own state ── -->
 <section id="setup">
-  <label class="file">
-    <input type="file" id="ir" accept="application/json">
-    <span>Choose the study specification…</span>
-  </label>
-  <div id="irsummary" class="muted"></div>
-  <details id="keybox">
-    <summary>API key</summary>
-    <input type="password" id="key" placeholder="sk-…">
-    <button id="savekey" class="ghost">Save</button>
-    <p class="muted small">Used only to read this platform's element library and map field types — a couple of calls per platform, never per field.</p>
-  </details>
-  <div class="row">
-    <button id="inspect" class="ghost">Inspect platform</button>
-    <button id="start" disabled>Build the study</button>
-  </div>
+  <ol class="steps">
+    <li id="s1" class="step">
+      <span class="num">1</span>
+      <div class="body">
+        <div class="t">Connect to the platform</div>
+        <div class="d">Reads the element library and works out which control saves.</div>
+        <button id="inspect" class="ghost">Inspect this platform</button>
+        <div id="s1done" class="done" hidden></div>
+      </div>
+    </li>
+
+    <li id="s2" class="step">
+      <span class="num">2</span>
+      <div class="body">
+        <div class="t">Load the study specification</div>
+        <div class="d">The protocol, already turned into visits, forms and fields.</div>
+        <label class="file">
+          <input type="file" id="ir" accept="application/json">
+          <span id="filelabel">Choose a .json file…</span>
+        </label>
+        <div id="s2done" class="done" hidden></div>
+      </div>
+    </li>
+
+    <li id="s3" class="step">
+      <span class="num">3</span>
+      <div class="body">
+        <div class="t">Build</div>
+        <div class="d">Everything is read back after it is written, and nothing
+          uncertain is saved without asking you first.</div>
+        <button id="start" disabled>Build the study</button>
+        <details id="keybox">
+          <summary>API key</summary>
+          <input type="password" id="key" placeholder="sk-…" autocomplete="off">
+          <button id="savekey" class="ghost small">Save key</button>
+          <p class="hint">Two calls per platform — reading the element library and
+             mapping the field types. Nothing per field.</p>
+        </details>
+      </div>
+    </li>
+  </ol>
 </section>
 
+<!-- ── running ── -->
 <section id="progress" hidden>
+  <div class="nowrow">
+    <span class="spin" id="spin"></span>
+    <span id="now" class="now">Starting…</span>
+  </div>
   <div class="bar"><div id="fill"></div></div>
-  <div id="counts" class="muted small"></div>
+  <div class="tiles">
+    <div class="tile"><div class="v" id="cVisits">0</div><div class="k">visits</div></div>
+    <div class="tile"><div class="v" id="cForms">0</div><div class="k">forms</div></div>
+    <div class="tile"><div class="v" id="cFields">0</div><div class="k">fields</div></div>
+    <div class="tile"><div class="v" id="cRules">0</div><div class="k">rules</div></div>
+  </div>
   <button id="stop" class="ghost small">Stop</button>
 </section>
 
+<!-- ── decisions ── -->
 <section id="queue" hidden>
-  <h2>Decisions <span id="qhead" class="muted"></span></h2>
+  <h2>Your decisions <span id="qhead" class="sub"></span></h2>
+  <p id="qempty" class="empty" hidden>Nothing needs you right now.</p>
   <div id="items"></div>
 </section>
 
+<!-- ── finished ── -->
 <section id="done" hidden>
-  <h2>Run record</h2>
-  <pre id="record"></pre>
+  <div class="finished">
+    <div class="tick">✓</div>
+    <div>
+      <div class="t" id="doneline">Study built</div>
+      <div class="d" id="donesub"></div>
+    </div>
+  </div>
+  <details>
+    <summary>Run record — what was built, from which line, and whether it was verified</summary>
+    <pre id="record"></pre>
+  </details>
   <div class="row">
-    <button id="dljson" class="ghost">Download JSON</button>
-    <button id="dltxt" class="ghost">Download summary</button>
+    <button id="dljson" class="ghost small">Download JSON</button>
+    <button id="dltxt" class="ghost small">Download summary</button>
   </div>
 </section>
 
