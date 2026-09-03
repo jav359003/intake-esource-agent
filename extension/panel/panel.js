@@ -71,6 +71,14 @@ $('#inspect').addEventListener('click', async () => {
   if (!r.ok) return say(r.why);
   const p = r.profile;
   $('#platform').textContent = `${p.libraryEntries.length} element types · commits with "${p.commit.control}"`;
+  if (!p.libraryEntries.length) {
+    return say('No element library on this screen — which is expected on a visit list, ' +
+               'because the type palette only exists inside a form builder.\n\n' +
+               'That is fine: the agent reads the library the first time it opens a ' +
+               'builder during the run, and settles the type mapping there.\n\n' +
+               (p.commit.control ? `From here it can see a commit control: "${p.commit.control}".`
+                                 : 'Nothing on this screen commits anything, which is also expected.'));
+  }
   say(`Found ${p.libraryEntries.length} element types: ${p.libraryEntries.join(', ')}\n\n` +
       `Commits with "${p.commit.control}"` +
       (p.commit.decoys.length ? `, rejecting ${p.commit.decoys.join(', ')}` : '') +

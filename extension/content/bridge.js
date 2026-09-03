@@ -13,6 +13,7 @@
         switch (msg.type) {
           case 'ping':      reply({ ok: true, url: location.href, title: document.title }); break;
           case 'discover':  reply({ ok: true, profile: R.discover() }); break;
+          case 'typemap':   reply(await R.ensureTypeMap(R.state.ctx || {})); break;
           case 'plan':      reply({ ok: true, ...(await R.buildPlan(msg.ir)) }); break;
           case 'run':       reply({ ok: true, ...(await R.execute(msg.options || {})) }); break;
           case 'status':    reply({ ok: true, ...R.status(),

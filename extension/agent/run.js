@@ -44,6 +44,53 @@ function escalate(item) {
   return g;
 }
 
+/**
+ * Learn the platform's vocabulary at the first moment it is visible.
+ *
+ * The element library only exists inside a form builder, but the type mapping
+ * has to be settled before the first field is built. Running discovery when
+ * the panel opens -- on a visit schedule, where there is no library -- yields
+ * nothing, which is what the packaged extension did until this existed. The
+ * standalone tests hid it by handing the mapping in directly.
+ *
+ * So it is lazy: the first time the run is standing in a builder, read the
+ * library, ask the model to map the thirteen canonical types onto it, and
+ * cache the answer for the rest of the study. Anything the mapping is unsure
+ * about is escalated BEFORE a field is built with it.
+ */
+R.ensureTypeMap = async function ensureTypeMap(ctx) {
+  if (state.typeMap) return { ok: true, cached: true };
+
+  const profile = window.__soaDiscover.profile(window.__soaAct);
+  state.profile = profile;
+  trace({ kind: 'discovery', profile });
+  if (!profile.libraryEntries.length) {
+    return { ok: false, why: 'no element library is visible on this screen, so field types cannot be mapped' };
+  }
+
+  const T = window.__soaTypemap;
+  const reply = await new Promise((res) => chrome.runtime.sendMessage(
+    { type: 'llm', system: T.SYSTEM, prompt: T.buildPrompt(profile.libraryEntries) },
+    (r) => res(r || { ok: false, why: 'the background worker did not answer' })));
+  if (!reply.ok) return { ok: false, why: `type mapping failed: ${reply.why}` };
+
+  const triaged = T.triage(reply.data);
+  const map = {};
+  for (const m of reply.data.mappings || []) map[m.canonical] = m.library_entry;
+  R.setTypeMap(map, reply.cached ? 'model, cached for this platform' : 'model, from the library read off this platform');
+
+  for (const b of triaged.blocking) {
+    escalate({ about: { kind: 'type-map', name: b.canonical, type: b.canonical },
+               why: b.why, candidates: b.options, kind: 'type-map' });
+  }
+  for (const c of triaged.confirm) {
+    escalate({ about: { kind: 'type-map', name: 'high-stakes pairs' },
+               why: c.why, candidates: c.rows.map((r) => `${r.pair[0]} → ${r.entries[0]}  |  ${r.pair[1]} → ${r.entries[1]}`),
+               kind: 'type-map' });
+  }
+  return { ok: true, mapped: Object.keys(map).length, blocking: triaged.blocking.length };
+};
+
 R.discover = function discover() {
   state.profile = window.__soaDiscover.profile(window.__soaAct);
   trace({ kind: 'discovery', profile: state.profile });
@@ -149,6 +196,10 @@ R.execute = async function execute(options = {}) {
           if (!opened.ok) { escalate({ about: step, why: opened.why, kind: 'navigation' }); failed++; continue; }
         }
         openForm = { name: step.name, visit: step.visit }; pendingLabels = [];
+        // Standing in a builder for the first time: this is when the element
+        // library is visible and the type mapping can be settled.
+        const mapped = await R.ensureTypeMap(ctx);
+        if (!mapped.ok) { escalate({ about: step, why: mapped.why, kind: 'type-map' }); }
         done++;
       } else if (step.kind === 'field') {
         const entry = libraryEntryFor(step.type);
